@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "Running make format..."
+make format
+
+# Stage any files that were reformatted
+git diff --name-only | xargs -r git add
+
+# Check if there are still unstaged changes (shouldn't happen, but just in case)
+if ! git diff --quiet; then
+    echo "Error: Unstaged changes remain after formatting."
+    exit 1
+fi
