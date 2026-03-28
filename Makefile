@@ -1,7 +1,7 @@
 .PHONY: all, update, instantiate, tests, clean, pages, format-check, format, install-hooks
 
 # Julia command
-JULIA = julia
+JULIA = julia +1.13
 PKG_NAME = ONSAS
 
 # Update dependecies
