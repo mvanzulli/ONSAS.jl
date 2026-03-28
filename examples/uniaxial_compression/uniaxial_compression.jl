@@ -7,7 +7,6 @@ using ONSAS
 # Mesh Cube with Gmsh.jl
 include(joinpath("..", "uniaxial_extension", "uniaxial_mesh.jl"))
 
-"Return problem parameters"
 function parameters()
     E = 1.0                     # Young modulus in Pa
     ν = 0.3                     # Poisson's ratio

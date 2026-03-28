@@ -85,26 +85,27 @@ contains the indexes of the elements containing the points."
 function evaluate_points_in_elements(elements::Vector{E}, vec_points::Vector{P},
         ::Threaded) where {dim, E <: AbstractElement{dim},
         P <: Point{dim}}
-    numthreads = Threads.nthreads()
-    in_mesh_points_idx = [Vector{Int64}() for _ in 1:numthreads]
-    in_mesh_elements_idx = [Vector{Int64}() for _ in 1:numthreads]
     num_points = length(vec_points)
+    # Store per-point results: 0 means not found, >0 is the element index.
+    result_elem_idx = zeros(Int64, num_points)
     Threads.@threads for point_idx in 1:num_points
-        id = Threads.threadid()
         point = vec_points[point_idx]
-        @inbounds for (elem_idx, elem) in enumerate(elements)
-            @inbounds if point ∈ elem
-                push!(in_mesh_points_idx[id], point_idx)
-                push!(in_mesh_elements_idx[id], elem_idx)
-                # Continue with next point, without checking the following elements.
+        for (elem_idx, elem) in enumerate(elements)
+            if point ∈ elem
+                result_elem_idx[point_idx] = elem_idx
                 break
             end
         end
     end
-    # Reorder in_mesh_elements_idx
-    in_mesh_points_idx = reduce(vcat, in_mesh_points_idx)
-    in_mesh_elements_idx = reduce(vcat, in_mesh_elements_idx)
-    # _sort_indexes!(in_mesh_points_idx, in_mesh_elements_idx)
+    # Collect results
+    in_mesh_points_idx = Vector{Int64}()
+    in_mesh_elements_idx = Vector{Int64}()
+    for point_idx in 1:num_points
+        if result_elem_idx[point_idx] != 0
+            push!(in_mesh_points_idx, point_idx)
+            push!(in_mesh_elements_idx, result_elem_idx[point_idx])
+        end
+    end
     in_mesh_points_idx, in_mesh_elements_idx
 end
 
@@ -196,11 +197,9 @@ function evaluate_points_in_mesh(mesh::AbstractMesh,
         end
     end
 
-    numthreads = Threads.nthreads()
-    in_mesh_points_idx = [Vector{Int64}() for _ in 1:numthreads]
-    in_mesh_elements_idx = [Vector{Int64}() for _ in 1:numthreads]
-    Threads.@threads for point_idx in 1:length(vec_points)
-        id = Threads.threadid()
+    num_points = length(vec_points)
+    result_elem_idx = zeros(Int64, num_points)
+    Threads.@threads for point_idx in 1:num_points
         point = vec_points[point_idx]
         @inbounds for (box_idx, Hi) in enumerate(Hpart)
             if point ∈ Hi
@@ -208,23 +207,25 @@ function evaluate_points_in_mesh(mesh::AbstractMesh,
                 found = false
                 @inbounds for elem_idx in elems_idx_in_box[box_idx]
                     if point ∈ Meshes.element(mesh, elem_idx)
-                        push!(in_mesh_points_idx[id], point_idx)
-                        push!(in_mesh_elements_idx[id], elem_idx)
+                        result_elem_idx[point_idx] = elem_idx
                         found = true
                         break
                     end
                 end
                 if found
-                    # Continue with next point.
                     break
                 end
             end
         end
     end
-    in_mesh_points_idx = reduce(vcat, in_mesh_points_idx)
-    in_mesh_elements_idx = reduce(vcat, in_mesh_elements_idx)
-
-    # _sort_indexes!(in_mesh_points_idx, in_mesh_elements_idx)
+    in_mesh_points_idx = Vector{Int64}()
+    in_mesh_elements_idx = Vector{Int64}()
+    for point_idx in 1:num_points
+        if result_elem_idx[point_idx] != 0
+            push!(in_mesh_points_idx, point_idx)
+            push!(in_mesh_elements_idx, result_elem_idx[point_idx])
+        end
+    end
     in_mesh_points_idx, in_mesh_elements_idx
 end
 
