@@ -139,14 +139,14 @@ end
 
 function _B_mat!(B::Matrix, deriv::Matrix, F::Matrix)
     B[1:3,
-        :] = [diagm(deriv[:, 1]) * F' diagm(deriv[:, 2]) *
-                                      F' diagm(deriv[:, 3]) * F' diagm(deriv[:, 4]) * F']
+    :] = [diagm(deriv[:, 1]) * F' diagm(deriv[:, 2]) *
+                                         F' diagm(deriv[:, 3]) * F' diagm(deriv[:, 4]) * F']
 
     for k in 1:4
         B[4:6,
-            (k - 1) * 3 .+ (1:3)] = [deriv[2, k] * F[:, 3]' + deriv[3, k] * F[:, 2]'
-                                     deriv[1, k] * F[:, 3]' + deriv[3, k] * F[:, 1]'
-                                     deriv[1, k] * F[:, 2]' + deriv[2, k] * F[:, 1]']
+        (k - 1) * 3 .+ (1:3)] = [deriv[2, k] * F[:, 3]' + deriv[3, k] * F[:, 2]'
+                                        deriv[1, k] * F[:, 3]' + deriv[3, k] * F[:, 1]'
+                                        deriv[1, k] * F[:, 2]' + deriv[2, k] * F[:, 1]']
     end
     B
 end

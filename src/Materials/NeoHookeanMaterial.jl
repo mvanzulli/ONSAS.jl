@@ -118,7 +118,7 @@ function _∂S∂E!(
     for index in INDEXES_TO_VOIGT
         i, j = index
         ∂S∂E[row,
-            :] .= voigt(
+        :] .= voigt(
             ForwardDiff.gradient!(aux_gradients,
                 E -> S_analytic(m, E)[i, j],
                 collect(𝔼)),
