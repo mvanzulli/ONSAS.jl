@@ -10,7 +10,6 @@ Random.seed!(1234)
 # Mesh with Gmsh.jl
 include("cylinder_mesh.jl")
 
-"Return problem parameters"
 function parameters()
     ## scalar parameters (dimensions in mm an MPa)
     Lz = 30                 # cylinder length in z mm

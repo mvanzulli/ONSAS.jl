@@ -7,7 +7,6 @@ using ONSAS
 # Mesh with Gmsh.jl (see linear_extension_sketch)
 include("linear_extension_mesh.jl")
 
-"Return problem parameters"
 function parameters()
     E = 2.0                             # Young modulus in Pa
     ν = 0.4                             # Poisson's ratio

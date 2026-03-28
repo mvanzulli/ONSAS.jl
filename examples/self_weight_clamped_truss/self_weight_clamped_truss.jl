@@ -29,7 +29,6 @@ abstract type AbstractCase end
 struct FirstCase <: AbstractCase end
 struct SecondCase <: AbstractCase end
 
-"Return problem parameters"
 function parameters()
     N = 4       # Number of elements.
     E = 30e6    # Young's modulus.
