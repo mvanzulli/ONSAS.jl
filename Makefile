@@ -1,4 +1,4 @@
-.PHONY: all, update, instantiate, tests, clean, pages, format-check, format
+.PHONY: all, update, instantiate, tests, clean, pages, format-check, format, install-hooks
 
 # Julia command
 JULIA = julia
@@ -30,6 +30,7 @@ clean:
 	find . -name "*.msh" -type f -exec rm -f {} +
 	find . -name "*.vti" -type f -exec rm -f {} +
 	find . -name "*.vtu" -type f -exec rm -f {} +
+	find . -name "*.pvd" -type f -exec rm -f {} +
 
 # Check JuliaFormatter is applied
 format-check:
@@ -47,6 +48,12 @@ format-check:
 # Apply JuliaFormatter is applied
 format:
 	$(JULIA) --project=. -e 'using JuliaFormatter; format(".", overwrite=true, verbose=true)'
+
+# Install git hooks
+install-hooks:
+	cp .githooks/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	@echo "Git hooks installed."
 
 # Run all tests
 all: tests pages format-check clean
