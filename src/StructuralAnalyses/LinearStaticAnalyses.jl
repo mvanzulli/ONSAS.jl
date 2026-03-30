@@ -75,10 +75,9 @@ function Base.show(io::IO, sa::LinearStaticAnalysis)
 end
 
 "Solves a linear analysis problem mutating the state."
-function _solve!(sa::LinearStaticAnalysis,
-        alg::Nothing,
-        linear_solver::LinearSolver;
-        linear_solve_inplace::Bool)
+function _solve!(sa::LinearStaticAnalysis, config::OnsasConfig)
+    linear_solver = config.linear_solver.algorithm
+    linear_solve_inplace = config.linear_solver.inplace
     s = structure(sa)
 
     # Initialize solution.

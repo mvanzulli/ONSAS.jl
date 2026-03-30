@@ -75,7 +75,7 @@ function solve(strain_model::Type{<:AbstractStrainModel} = GreenStrain)
     # -------------------------------
     # Numerical solution
     # -------------------------------
-    ONSAS.solve(sa, nr)
+    ONSAS.solve(sa, OnsasConfig(solver = nr))
 end;
 
 "Test problem solution"

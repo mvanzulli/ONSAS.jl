@@ -1,6 +1,11 @@
 using Test
 using SafeTestsets: @safetestset
 
+UTILS = ["aqua.jl", "utils.jl"]
+
+INTERFACES = ["interfaces/gmsh.jl",
+    "interfaces/vtk.jl"]
+
 MODULES = ["boundary_conditions/boundary_conditions.jl",
     "cross_sections/cross_sections.jl",
     "entities/frames.jl",
@@ -8,8 +13,6 @@ MODULES = ["boundary_conditions/boundary_conditions.jl",
     "entities/tetrahedrons.jl",
     "entities/triangular_faces.jl",
     "entities/trusses.jl",
-    "interfaces/gmsh.jl",
-    "interfaces/vtk.jl",
     "materials/materials.jl",
     "meshes/handlers.jl",
     "meshes/interpolators.jl",
@@ -18,9 +21,8 @@ MODULES = ["boundary_conditions/boundary_conditions.jl",
     "structural_analyses/dynamic_analyses.jl",
     "structural_analyses/static_analyses.jl",
     "structural_model/structures.jl",
-    "structural_solvers/structural_solvers.jl",
-    "aqua.jl",
-    "utils.jl"]
+    "structural_solvers/structural_solvers.jl"
+]
 
 EXAMPLES_FOLDER = joinpath("..", "examples")
 
@@ -49,4 +51,4 @@ function test(file::String)
     end
 end
 
-test([MODULES, EXAMPLES]);
+test([UTILS, MODULES, EXAMPLES, INTERFACES]);

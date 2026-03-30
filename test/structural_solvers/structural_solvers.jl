@@ -124,3 +124,29 @@ end
     @test isempty(a.J)
     @test isempty(a.V)
 end
+
+@testset "ONSAS.StructuralSolvers.LinearSolverConfig" begin
+    lsc = LinearSolverConfig()
+    @test typeof(lsc.algorithm) == typeof(DEFAULT_LINEAR_SOLVER())
+    @test lsc.inplace == false
+
+    lsc2 = LinearSolverConfig(inplace = true)
+    @test lsc2.inplace == true
+
+    @test_nowarn show(IOBuffer(), lsc)
+end
+
+@testset "ONSAS.StructuralSolvers.OnsasConfig" begin
+    cfg = OnsasConfig()
+    @test cfg.solver === nothing
+    @test cfg.linear_solver isa LinearSolverConfig
+
+    nr = NewtonRaphson(tols)
+    cfg2 = OnsasConfig(solver = nr)
+    @test cfg2.solver === nr
+
+    cfg3 = OnsasConfig(linear_solver = LinearSolverConfig(inplace = true))
+    @test cfg3.linear_solver.inplace == true
+
+    @test_nowarn show(IOBuffer(), cfg)
+end
