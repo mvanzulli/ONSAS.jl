@@ -20,7 +20,7 @@ using ..StructuralSolvers
 using ..Solvers
 using ..Solutions
 
-@reexport import ..StructuralSolvers: _solve!, step!
+@reexport import ..StructuralSolvers: _solve!, step!, default_solver
 
 export NonLinearStaticAnalysis
 
@@ -41,6 +41,10 @@ mutable struct NonLinearStaticAnalysis{
     "Current load factor step."
     current_step::Int64
 end
+
+"Default solver for non-linear static analysis is Newton-Raphson with default tolerances."
+default_solver(::NonLinearStaticAnalysis) = NewtonRaphson()
+
 "Constructor for a non linear analysis with load factors, optional initial step and initial state."
 function NonLinearStaticAnalysis(s::S, λᵥ::LFV;
         initial_state::FullStaticState = FullStaticState(s),
@@ -67,10 +71,10 @@ function Base.show(io::IO, sa::NonLinearStaticAnalysis)
 end
 
 "Solves an non linear static analysis problem with a given solver."
-function _solve!(sa::NonLinearStaticAnalysis,
-        alg::AbstractSolver,
-        linear_solver::LinearSolver;
-        linear_solve_inplace::Bool)
+function _solve!(sa::NonLinearStaticAnalysis, config::OnsasConfig)
+    alg = config.solver
+    linear_solver = config.linear_solver.algorithm
+    linear_solve_inplace = config.linear_solver.inplace
     s = structure(sa)
     # Initialize solution.
     sol = Solution(sa, alg)

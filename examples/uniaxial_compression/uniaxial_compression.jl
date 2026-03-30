@@ -181,7 +181,7 @@ function solve(case::AbstractCase)
     # -------------------------------
     # Numerical solution
     # -------------------------------
-    ONSAS.solve(sa, nr)
+    ONSAS.solve(sa, OnsasConfig(solver = nr))
 end;
 
 "Computes numeric solution

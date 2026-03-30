@@ -112,7 +112,7 @@ function solve(::FirstCase)
     # -------------------------------
     # Numerical solution
     # -------------------------------
-    ONSAS.solve(sa; linear_solve_inplace = false)
+    ONSAS.solve(sa)
 end;
 
 "Return the problem solution"
@@ -138,7 +138,7 @@ function solve(::SecondCase)
     # -------------------------------
     # Numerical solution
     # -------------------------------
-    ONSAS.solve(sa, nr)
+    ONSAS.solve(sa, OnsasConfig(solver = nr))
 end;
 
 "Return a rand point in the cylinder (R, θ, L)."

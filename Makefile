@@ -6,15 +6,15 @@ PKG_NAME = ONSAS
 
 # Update dependecies
 update:
-	$(JULIA) --project=. -e 'import Pkg; Pkg.update()'  &&
-	$(JULIA) --project=./docs/ -e 'import Pkg; Pkg.update()' &&
-	&& $(JULIA) --project=./test/ -e 'import Pkg; Pkg.update()'
+	$(JULIA) --project=. -e 'import Pkg; Pkg.update()' && \
+	$(JULIA) --project=./docs/ -e 'import Pkg; Pkg.update()' && \
+	$(JULIA) --project=./test/ -e 'import Pkg; Pkg.update()'
 
 # Update dependecies
 instantiate:
-	$(JULIA) --project=. -e 'import Pkg; Pkg.instantiate()'  &&
-	$(JULIA) --project=./docs/ -e 'import Pkg; Pkg.instantiate()' &&
-	&& $(JULIA) --project=./test/ -e 'import Pkg; Pkg.instantiate()'
+	$(JULIA) --project=. -e 'import Pkg; Pkg.instantiate()' && \
+	$(JULIA) --project=./docs/ -e 'import Pkg; Pkg.instantiate()' && \
+	$(JULIA) --project=./test/ -e 'import Pkg; Pkg.instantiate()'
 
 # Run all tests
 tests:
