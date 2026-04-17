@@ -27,7 +27,7 @@ using ..StructuralSolvers
                                       iterations
 @reexport import ..Entities: internal_forces, inertial_forces, strain, stress
 
-export AbstractSolution, Solution, analysis, solver, states,
+export AbstractSolution, Solution, analysis, solver, states, reference_state,
        displacements, external_forces, iteration_residuals, deformed_node_positions
 
 """
@@ -53,12 +53,26 @@ analysis(sol::AbstractSolution) = sol.analysis
 solver(sol::AbstractSolution) = sol.solver
 
 """
-Solution that stores all intermediate arrays during the analysis.
+Solution that stores all states of the analysis.
+
+`states[1]` is the initial (unloaded) state at time 0, capturing any applied boundary conditions
+before the first load step. `states[k+1]` is the converged state at load step `k`.
+This convention matches standard FEA solvers (FEBio, Abaqus, OpenSees): the reference state
+is always at t = 0, and each subsequent entry corresponds to a load/time increment.
 """
 struct Solution{ST <: AbstractStaticState,
     A <: AbstractStructuralAnalysis,
     SS <: Union{AbstractSolver, LinearSolver}} <: AbstractSolution
-    "Vector containing the converged structural states at each step."
+    """
+    Purely undeformed reference configuration (zero displacements, zero stress, zero strain).
+    Corresponds to the continuum mechanics reference configuration — independent of any applied BCs.
+    """
+    reference_state::ST
+    """
+    Vector of structural states. `states[1]` is the initial state at t = 0, capturing any applied
+    boundary conditions before the first load step. `states[k+1]` is the converged state at load
+    step `k`. Length is `N + 1` for `N` load steps.
+    """
     states::Vector{ST}
     "Analysis solved."
     analysis::A
@@ -66,7 +80,7 @@ struct Solution{ST <: AbstractStaticState,
     solver::SS
 end
 
-"Constructor with empty `AbstractStructuralState`s `Vector` and type `S`."
+"Constructor pre-allocating states with an initial state at index 1."
 function Solution(analysis::A,
         solver::SS) where {A <: AbstractStructuralAnalysis,
         SS <: Union{AbstractSolver, LinearSolver}}
@@ -77,17 +91,33 @@ function Solution(analysis::A,
     ϵᵏ = strain(state)
     σᵏ = stress(state)
 
-    #TODO: Create a general way to pre-allocate with the number of analysis steps
-    states = Vector{StaticState}(undef, length(analysis.λᵥ))
+    # λᵥ starts at 0; the N load steps are λᵥ[2:end].
+    nsteps = length(analysis.λᵥ) - 1
+    # states[1] = initial state; states[2..N+1] = one per load step.
+    states = Vector{StaticState}(undef, nsteps + 1)
 
-    for i in 1:length(analysis.λᵥ)
+    # Reference configuration: purely undeformed (zero U, zero σ, zero ε).
+    ref_state = StaticState(
+        zero(Uᵏ),
+        dictionary([e => zero(ϵ) for (e, ϵ) in pairs(ϵᵏ)]),
+        dictionary([e => zero(σ) for (e, σ) in pairs(σᵏ)]))
+
+    # Capture the initial state from the analysis (reflects BCs and any initial conditions,
+    # e.g. prescribed displacements, pre-stress, thermal initial conditions — FEBio step 0).
+    states[1] = StaticState(
+        copy(Uᵏ),
+        dictionary([e => copy(ϵ) for (e, ϵ) in pairs(ϵᵏ)]),
+        dictionary([e => copy(σ) for (e, σ) in pairs(σᵏ)]))
+
+    # Pre-allocate the remaining states for each load step.
+    for i in 2:(nsteps + 1)
         sol_Uᵏ = similar(Uᵏ)
         sol_σᵏ = dictionary([e => similar(σ) for (e, σ) in pairs(σᵏ)])
         sol_ϵᵏ = dictionary([e => similar(ϵ) for (e, ϵ) in pairs(ϵᵏ)])
         states[i] = StaticState(sol_Uᵏ, sol_ϵᵏ, sol_σᵏ)
     end
 
-    Solution{StaticState, A, SS}(states, analysis, solver)
+    Solution{StaticState, A, SS}(ref_state, states, analysis, solver)
 end
 
 "Generic minimal show method for a generic `solution`"
@@ -107,14 +137,15 @@ function _print_table(solution::AbstractSolution)
     header = ["iter", "time", "||Uᵏ||", "||ΔUᵏ||/||Uᵏ||", "||ΔRᵏ||", "||ΔRᵏ||/||Fₑₓₜ||",
         "convergence criterion", "iterations"]
 
-    ΔU_rel = getindex.(displacement_tol(solution), 1)
-    ΔU = getindex.(displacement_tol(solution), 2)
-    ΔR_rel = getindex.(residual_forces_tol(solution), 1)
-    ΔR = getindex.(residual_forces_tol(solution), 2)
+    # states[1] is the initial state (not a load step); skip it so lengths match λᵥ.
+    ΔU_rel = getindex.(displacement_tol(solution), 1)[2:end]
+    ΔU = getindex.(displacement_tol(solution), 2)[2:end]
+    ΔR_rel = getindex.(residual_forces_tol(solution), 1)[2:end]
+    ΔR = getindex.(residual_forces_tol(solution), 2)[2:end]
     t = analysis(solution).λᵥ
     criterions = [string(criterion_step)[1:(end - 2)]
-                  for criterion_step in criterion(solution)]
-    iters = iterations(solution)
+                  for criterion_step in criterion(solution)][2:end]
+    iters = iterations(solution)[2:end]
     num_times = length(t)
     data = hcat(collect(1:num_times), t, ΔU, ΔU_rel, ΔR, ΔR_rel, criterions, iters)
 
@@ -133,7 +164,10 @@ function _print_table(solution::AbstractSolution)
         alignment = :c)
 end
 
-"Return the solved states."
+"Return the reference (undeformed) configuration: zero displacements, zero stress, zero strain."
+reference_state(sol::Solution) = sol.reference_state
+
+"Return all states: states[1] is the initial state, states[k+1] is load step k."
 states(sol::Solution) = sol.states
 
 for f in [:displacements, :internal_forces, :external_forces]

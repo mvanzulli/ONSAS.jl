@@ -50,16 +50,17 @@ function NonLinearStaticAnalysis(s::S, λᵥ::LFV;
         initial_state::FullStaticState = FullStaticState(s),
         initial_step::Int = 1) where {S <: AbstractStructure,
         LFV <: AbstractVector{<:Real}}
-    !(1 ≤ initial_step ≤ length(λᵥ)) &&
-        throw(ArgumentError("initial_step must be in [1, $(length(λᵥ))] but is: $initial_step."))
-    NonLinearStaticAnalysis(s, initial_state, λᵥ, initial_step)
+    λᵥ_full = iszero(first(λᵥ)) ? λᵥ : [zero(eltype(λᵥ)); λᵥ]
+    nsteps = length(λᵥ_full) - 1
+    !(1 ≤ initial_step ≤ nsteps) &&
+        throw(ArgumentError("initial_step must be in [1, $nsteps] but is: $initial_step."))
+    NonLinearStaticAnalysis(s, initial_state, λᵥ_full, initial_step)
 end
 
 "Constructor for non linear static analysis given a final time (or load factor) and the number of steps."
 function NonLinearStaticAnalysis(
         s::AbstractStructure, t₁::Real = 1.0; NSTEPS = 10, initial_step::Int = 1)
-    t₀ = t₁ / NSTEPS
-    λᵥ = collect(LinRange(t₀, t₁, NSTEPS))
+    λᵥ = collect(LinRange(zero(t₁), t₁, NSTEPS + 1))
     NonLinearStaticAnalysis(s, λᵥ; initial_step)
 end
 

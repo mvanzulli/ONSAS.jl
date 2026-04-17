@@ -199,7 +199,6 @@ function _extract_cell_data(sol::AbstractSolution, fields::Vector{Field},
     end
     cell_data
 end
-
 """
 Generate a VTK file from a solution structure, exporting simulation data such as displacements, strain, and stress.
 
@@ -246,6 +245,7 @@ end
 """
 Generate a time-series of VTK files for a solution struct and organize them into a ParaView collection.
 Each time step's VTK file is added to the collection for seamless visualization of the simulation over time.
+`states(sol)[1]` (initial state) is written at time 0.0; subsequent states at their respective times.
 Returns the path to the generated ParaView collection file.
 """
 function write_vtk(sol::AbstractSolution, base_filename::String;
@@ -254,16 +254,13 @@ function write_vtk(sol::AbstractSolution, base_filename::String;
     times_vector = times(analysis(sol))  # Extract the times from the solution analysis
     pvd = paraview_collection(base_filename)
 
-    # Loop over each time index and generate VTK files
-    for (time_index, time) in enumerate(times_vector)
-        vtk_filename = "$(base_filename)_timestep_$time_index.vtu"
-        vtk = write_vtk(sol, vtk_filename, time_index; fields, append)
+    for (step, time) in enumerate(times_vector)
+        vtk_filename = "$(base_filename)_timestep_$(step - 1).vtu"
+        vtk = write_vtk(sol, vtk_filename, step; fields, append)
         pvd[time] = vtk
     end
 
-    # Close the ParaView collection file
     close(pvd)
-
     @info "VTK file collection written to $base_filename.pvd"
     "$base_filename.pvd"
 end

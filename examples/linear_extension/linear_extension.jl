@@ -139,7 +139,6 @@ end;
 function analytic_solution(sol::AbstractSolution, p1::Point{dim}, p2::Point{dim},
         e::AbstractElement{dim}) where {dim}
     (; E, ν, λ, G, tension_load) = parameters()
-    sa = analysis(sol)
     ## Displacements
     "Compute displacements νmeric solution ui, uj and uk for analytic validation."
     function u_ijk_analytic(λv::Vector{<:Real},
@@ -154,12 +153,12 @@ function analytic_solution(sol::AbstractSolution, p1::Point{dim}, p2::Point{dim}
         [[ui(t) for t in λv], [uj(t) for t in λv], [uk(t) for t in λv]]
     end
     # point 1
-    u_1 = u_ijk_analytic(load_factors(sa), p1[1], p1[2], p1[3])
+    u_1 = u_ijk_analytic(load_factors(analysis(sol)), p1[1], p1[2], p1[3])
     ui_1 = u_1[1]
     uj_1 = u_1[2]
     uk_1 = u_1[3]
     # point 2
-    u_2 = u_ijk_analytic(load_factors(sa), p2[1], p2[2], p2[3])
+    u_2 = u_ijk_analytic(load_factors(analysis(sol)), p2[1], p2[2], p2[3])
     ui_2 = u_2[1]
     uj_2 = u_2[2]
     uk_2 = u_2[3]
@@ -194,7 +193,7 @@ function analytic_solution(sol::AbstractSolution, p1::Point{dim}, p2::Point{dim}
     # point in the rand element selected
     p = rand(coordinates(e))
     # strain
-    λv = load_factors(sa)
+    λv = load_factors(analysis(sol))
     ϵ = ϵ_ijk_analytic(λv, p[1], p[2], p[3])
     ϵ_1 = ϵ[1]
     ϵ_2 = ϵ[2]

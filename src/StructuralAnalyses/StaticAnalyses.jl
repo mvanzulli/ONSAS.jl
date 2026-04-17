@@ -57,28 +57,28 @@ and extends the following methods:
 """
 abstract type AbstractStaticAnalysis <: AbstractStructuralAnalysis end
 
-"Return the initial load factor of an structural analysis."
-initial_time(sa::AbstractStaticAnalysis) = first(load_factors(sa))
+"Return the initial load factor of an structural analysis (always 0)."
+initial_time(sa::AbstractStaticAnalysis) = first(sa.λᵥ)
+
+"Return load factors for all N+1 states, starting at 0."
+load_factors(sa::AbstractStaticAnalysis) = sa.λᵥ
+times(sa::AbstractStaticAnalysis) = load_factors(sa)
 
 "Return the current load factor of an structural analysis."
-current_time(sa::AbstractStaticAnalysis) = load_factors(sa)[sa.current_step[]]
+current_time(sa::AbstractStaticAnalysis) = sa.λᵥ[sa.current_step[] + 1]
 
 "Return the final load factor of an structural analysis."
-final_time(sa::AbstractStaticAnalysis) = last(load_factors(sa))
+final_time(sa::AbstractStaticAnalysis) = last(sa.λᵥ)
 
 "Return true if the structural analysis is completed."
 function is_done(sa::AbstractStaticAnalysis)
-    is_done_bool = if sa.current_step[] > length(load_factors(sa))
+    if sa.current_step[] > length(sa.λᵥ) - 1
         sa.current_step -= 1
         true
     else
         false
     end
 end
-
-"Return the final load factor vector of an structural analysis."
-load_factors(sa::AbstractStaticAnalysis) = sa.λᵥ
-times(sa::AbstractStaticAnalysis) = load_factors(sa)
 
 "Return the current load factor of an structural analysis."
 current_load_factor(sa::AbstractStaticAnalysis) = current_time(sa)
@@ -155,7 +155,8 @@ function Base.push!(st_sol::Solution{<:FullStaticState}, c_state::FullStaticStat
 end
 
 function store!(sol::Solution{<:StaticState}, state::FullStaticState, step::Int)
-    solution_state = states(sol)[step]
+    # sol.states[1] is the initial state; load step k is stored at sol.states[k+1].
+    solution_state = states(sol)[step + 1]
     sol_Uᵏ = displacements(solution_state)
     sol_σᵏ = stress(solution_state)
     sol_ϵᵏ = strain(solution_state)

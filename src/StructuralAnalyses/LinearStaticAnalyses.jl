@@ -52,9 +52,11 @@ function LinearStaticAnalysis(s::S, λᵥ::LFV;
             LinearResidualsIterationStep),
         initial_step::Int = 1) where {S <: AbstractStructure,
         LFV <: Vector{<:Real}}
-    !(1 ≤ initial_step ≤ length(λᵥ)) &&
-        throw(ArgumentError("initial_step must be in [1, $(length(λᵥ))] but is: $initial_step."))
-    LinearStaticAnalysis(s, initial_state, λᵥ, initial_step)
+    λᵥ_full = iszero(first(λᵥ)) ? λᵥ : [zero(eltype(λᵥ)); λᵥ]
+    nsteps = length(λᵥ_full) - 1
+    !(1 ≤ initial_step ≤ nsteps) &&
+        throw(ArgumentError("initial_step must be in [1, $nsteps] but is: $initial_step."))
+    LinearStaticAnalysis(s, initial_state, λᵥ_full, initial_step)
 end
 
 "Constructor for linear analysis given a final time (or load factor) and the number of steps."
@@ -62,8 +64,7 @@ function LinearStaticAnalysis(s::AbstractStructure, final_time::Real = 1.0; NSTE
         initial_state::FullStaticState = FullStaticState(s,
             LinearResidualsIterationStep),
         initial_step::Int = 1)
-    t₀ = final_time / NSTEPS
-    λᵥ = collect(LinRange(t₀, final_time, NSTEPS))
+    λᵥ = collect(LinRange(zero(final_time), final_time, NSTEPS + 1))
     LinearStaticAnalysis(s, λᵥ; initial_state, initial_step)
 end
 
