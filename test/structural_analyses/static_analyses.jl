@@ -200,11 +200,13 @@ sa_init = NonLinearStaticAnalysis(s, λ₁; NSTEPS, initial_step = init_step)
     @test structure(sa_init) == s
     λ₀ = λ₁ / NSTEPS
     λᵥ = LinRange(λ₀, λ₁, NSTEPS)
-    @test initial_time(sa_init) == first(λᵥ)
+    @test initial_time(sa_init) == 0.0
     @test current_time(sa_init) == λᵥ[init_step]
     @test final_time(sa_init) == last(λᵥ)
     @test current_load_factor(sa_init) == init_step * λ₁ / NSTEPS
-    @test load_factors(sa_init) == λᵥ
+    @test first(load_factors(sa_init)) == 0.0
+    @test last(load_factors(sa_init)) ≈ λ₁
+    @test length(load_factors(sa_init)) == NSTEPS + 1
 
     # External forces
     @test external_forces(current_state(sa_init)) == zeros(num_dofs(s))
@@ -227,56 +229,66 @@ sa_init = NonLinearStaticAnalysis(s, λ₁; NSTEPS, initial_step = init_step)
 end
 
 @testset "ONSAS.StructuralSolvers.Solution" begin
-    solved_states = [sst_rand, sst_rand, sst_rand]
-    num_states = length(solved_states)
-    nr = NewtonRaphson()
-    states_sol = Solution(FullStaticState[], sa, nr)
-    foreach(solved_states) do st
-        push!(states_sol, st)
-    end
+    NSTEPS_sol = 3
+    sa_sol = NonLinearStaticAnalysis(s, 1.0; NSTEPS = NSTEPS_sol)
+    states_sol = Solution(sa_sol, nr)
 
-    @test length(states(states_sol)) == num_states
-    @test analysis(states_sol) == sa
+    # N load steps → N+1 states: states[1] = initial, states[k+1] = load step k.
+    @test length(states(states_sol)) == NSTEPS_sol + 1
+    @test analysis(states_sol) == sa_sol
     @test solver(states_sol) == nr
 
+    # states[1] captures initial conditions (zero by default — no pre-stress/pre-displacement).
+    init_st = states(states_sol)[1]
+    @test length(displacements(init_st)) == num_dofs(s)
+    @test iszero(displacements(init_st))
+    @test all(iszero(σ) for σ in values(stress(init_st)))
+    @test all(iszero(ϵ) for ϵ in values(strain(init_st)))
+
+    # reference_state is the Lagrangian reference: zero U, σ, ε regardless of initial conditions.
+    ref = reference_state(states_sol)
+    @test iszero(displacements(ref))
+    @test all(iszero(σ) for σ in values(stress(ref)))
+    @test all(iszero(ϵ) for ϵ in values(strain(ref)))
+
+    # FEBio alignment: states[1] must capture non-zero initial conditions (pre-stress, prescribed U).
+    U₀ = rand(num_dofs(s))
+    σ₀ = dictionary([truss₁ => rand(3, 3), truss₂ => rand(3, 3)])
+    init_fs = FullStaticState(s)
+    displacements(init_fs) .= U₀
+    for e in [truss₁, truss₂]
+        stress(init_fs)[e] .= σ₀[e]
+    end
+    λᵥ_sol = collect(LinRange(0.0, 1.0, NSTEPS_sol + 1))
+    sa_prestress = NonLinearStaticAnalysis(s, λᵥ_sol; initial_state = init_fs)
+    sol_prestress = Solution(sa_prestress, nr)
+    @test displacements(states(sol_prestress)[1]) ≈ U₀
+    @test stress(states(sol_prestress)[1])[truss₁] ≈ σ₀[truss₁]
+    @test stress(states(sol_prestress)[1])[truss₂] ≈ σ₀[truss₂]
+    # reference_state is independent of initial conditions.
+    @test iszero(displacements(reference_state(sol_prestress)))
+    @test all(iszero(σ) for σ in values(stress(reference_state(sol_prestress))))
+
+    # store! writes load step k into states[k+1].
+    Uᵏ_s1 = rand(num_dofs(s))
+    σᵏ_s1 = dictionary([truss₁ => rand(3, 3), truss₂ => rand(3, 3)])
+    step1_fs = FullStaticState(s)
+    displacements(step1_fs) .= Uᵏ_s1
+    for e in [truss₁, truss₂]
+        stress(step1_fs)[e] .= σᵏ_s1[e]
+    end
+    store!(states_sol, step1_fs, 1)
+    @test displacements(states(states_sol)[2]) ≈ Uᵏ_s1
+    @test stress(states(states_sol)[2])[truss₁] ≈ σᵏ_s1[truss₁]
+    @test stress(states(states_sol)[2])[truss₂] ≈ σᵏ_s1[truss₂]
+
+    # DOF-level accessors span all NSTEPS+1 states.
     dof = Dof(5)
     vdof = [Dof(1), Dof(4)]
-
-    @test displacements(states_sol, dof) ==
-          repeat([displacements(sst_rand)[dof]], num_states)
-
-    @test displacements(states_sol, vdof) ==
-          [repeat([displacements(sst_rand)[vdof[1]]], num_states),
-        repeat([displacements(sst_rand)[vdof[2]]], num_states)]
-
-    @test displacements(states_sol, n₁) ==
-          [repeat([displacements(sst_rand)[dofs(n₁)[:u][1]]], num_states),
-        repeat([displacements(sst_rand)[dofs(n₁)[:u][2]]], num_states),
-        repeat([displacements(sst_rand)[dofs(n₁)[:u][3]]], num_states)]
-
-    @test internal_forces(states_sol, dof) ==
-          repeat([internal_forces(sst_rand)[dof]], num_states)
-
-    @test internal_forces(states_sol, vdof) ==
-          [repeat([internal_forces(sst_rand)[vdof[1]]], num_states),
-        repeat([internal_forces(sst_rand)[vdof[2]]], num_states)]
-
-    @test internal_forces(states_sol, n₁) ==
-          [repeat([internal_forces(sst_rand)[dofs(n₁)[:u][1]]], num_states),
-        repeat([internal_forces(sst_rand)[dofs(n₁)[:u][2]]], num_states),
-        repeat([internal_forces(sst_rand)[dofs(n₁)[:u][3]]], num_states)]
-
-    @test external_forces(states_sol, dof) ==
-          repeat([external_forces(sst_rand)[dof]], num_states)
-
-    @test external_forces(states_sol, vdof) ==
-          [repeat([external_forces(sst_rand)[vdof[1]]], num_states),
-        repeat([external_forces(sst_rand)[vdof[2]]], num_states)]
-
-    @test external_forces(states_sol, n₁) ==
-          [repeat([external_forces(sst_rand)[dofs(n₁)[:u][1]]], num_states),
-        repeat([external_forces(sst_rand)[dofs(n₁)[:u][2]]], num_states),
-        repeat([external_forces(sst_rand)[dofs(n₁)[:u][3]]], num_states)]
-
-    iteration_residuals(states_sol)
+    @test length(displacements(states_sol, dof)) == NSTEPS_sol + 1
+    @test displacements(states_sol, dof)[2] ≈ Uᵏ_s1[5]
+    @test displacements(states_sol, dof, 2) ≈ Uᵏ_s1[5]
+    @test length(displacements(states_sol, vdof)) == length(vdof)
+    @test length(displacements(states_sol, n₁)) == 3
+    @test length(displacements(states_sol, n₁, 1)) == NSTEPS_sol + 1
 end

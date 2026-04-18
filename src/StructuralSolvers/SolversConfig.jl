@@ -44,9 +44,9 @@ end
 
 "Show convergence settings."
 function Base.show(io::IO, cs::ConvergenceSettings)
-    println("• ||ΔUᵏ||/||Uᵏ||| ≤ : $(residual_forces_tol(cs))")
-    println("• ||ΔRᵏ||/||Fₑₓₜ||| $(displacement_tol(cs))")
-    println("• iter k ≤: $(max_iter_tol(cs))")
+    println(io, "• ||ΔUᵏ||/||Uᵏ||  ≤ : $(displacement_tol(cs))")
+    println(io, "• ||ΔRᵏ||/||Fₑₓₜ|| ≤ : $(residual_forces_tol(cs))")
+    println(io, "• iter k            ≤ : $(max_iter_tol(cs))")
 end
 
 "Return residual forces tolerance set."
@@ -131,7 +131,7 @@ end
 "Sets the iteration step with nothing."
 function reset!(ri_step::ResidualsIterationStep{<:Nothing})
     ri_step.iter = 0
-    ri_step.criterion = ResidualForceCriterion()
+    ri_step.criterion = NotConvergedYet()
     ri_step
 end
 

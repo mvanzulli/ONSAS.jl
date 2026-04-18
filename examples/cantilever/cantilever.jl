@@ -70,9 +70,9 @@ function test(sol::AbstractSolution)
     @testset "Displacements at the right-most node" begin
         Izz = b * h^3 / 12
         A = b * h
-        @test displacements(sol, right_most_node, 2)[1]≈-Py * L^3 / (3 * E * Izz) rtol=RTOL
-        @test displacements(sol, right_most_node, 6)[1]≈-Py * L^2 / (2 * E * Izz) rtol=RTOL
-        @test displacements(sol, right_most_node, 1)[1]≈Px * L / (E * A) rtol=RTOL
+        @test displacements(sol, right_most_node, 2)[end]≈-Py * L^3 / (3 * E * Izz) rtol=RTOL
+        @test displacements(sol, right_most_node, 6)[end]≈-Py * L^2 / (2 * E * Izz) rtol=RTOL
+        @test displacements(sol, right_most_node, 1)[end]≈Px * L / (E * A) rtol=RTOL
     end
 end
 
